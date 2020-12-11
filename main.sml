@@ -1,6 +1,6 @@
 (* import the matrix multiplcation lib *)
 use "lib.sml";
-use "ml.sml"
+(* use "ml.sml"; *)
 (* dot only works with real *)
 
 
@@ -13,3 +13,4 @@ val a1 = [[1.0,2.0], [2.0,3.0]];
 val a2 = [[2.0, 6.0], [3.0,2.0]];
 
 dot (to_real x1) (to_real x2); *)
+(* map *)

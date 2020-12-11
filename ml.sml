@@ -14,7 +14,3 @@ fun pow (x:real) y = if y = 0 then 1.0 else x * pow x (y-1);
 fun mean X = (foldl (fn (x, s) => (hd x) + s) 0.0 X);
 
 fun MSE X Y = mean(foldl (fn (L, (s::sr)) => sr@[[(pow ((hd s)-(hd L)) 2) / Real.fromInt(List.length(X))]]) Y model);
-
-MSE model Y;
-
-model; X; Y;

@@ -28,6 +28,17 @@ fun nth_col X n =
 
 fun shape X = (List.length(X), List.length(hd X));
 
+fun rand_Matrix nil = []
+  | rand_Matrix [x] = [iter x [] (fn s => s@[(Real.fromInt(Random.randRange (1,100000) (Random.rand()))/100000.0)])]
+  | rand_Matrix (x::xr) = iter x [] (fn x => (rand_Matrix xr)@x);
+
+  fun tr nil = nil
+    | tr (X:int list) = Real.fromInt(hd X)::tr (tl X);
+
+  (* list from int to real*)
+  fun to_real X =
+    foldl (fn (L, s) => s@[(tr L)]) [] X;
+
 (* main functions *)
 fun add X Y = #2 (foldl (fn (x, ((y::yr), ot)) => (yr, ot@ [(add_list x y)] )) (X, []) Y);
 
@@ -42,16 +53,3 @@ fun dot X Y =
     else
       raise matrix_not_compatible
 end;
-
-
-fun tr nil = nil
-  | tr (X:int list) = Real.fromInt(hd X)::tr (tl X);
-
-(* list from int to real*)
-fun to_real X =
-  foldl (fn (L, s) => s@[(tr L)]) [] X;
-
-(* example *)
-(* val a2 = [[1,2],[2,3]];
-add (to_real a2) (to_real a2);
-dot (to_real a2) (to_real a2); *)

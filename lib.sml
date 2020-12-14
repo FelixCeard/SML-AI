@@ -45,6 +45,9 @@ fun to_real X =
   foldl (fn (L, s) => s@[(tr L)]) [] X;
 
 
+fun mean (X) = (#2 (iter (List.length(X)) (X, 0.0) (fn ((x::xr), m) => (xr, (x+m))))) / Real.fromInt(List.length(X));
+mean ([1.0,2.0,3.0]);
+
 (* main functions *)
 fun add X Y = #2 (foldl (fn (x, ((y::yr), ot)) => (yr, ot@ [(add_list x y)] )) (X, []) Y);
 
@@ -69,11 +72,9 @@ fun transpose nil = nil
     in
       iter (#2 s) [] (fn s => s@[nth_col X (List.length(s))])
     end;
-val n = rand_Matrix [2,1];
-(transpose (n));
 
 fun sigmoid x = (1.0/(1.0 + Math.exp(~x)));
-fun sigmoid_deriv x = x * (1 - x);
+fun sigmoid_deriv (x) = x * (1.0 - x);
 
 fun mul_array X (n:real) = foldl (fn (x, s) => (x*n)::s) [] X;
 
@@ -85,27 +86,57 @@ fun mul X n =
 end;
 
 
+val X = to_real [[0,0],[0,1],[1,0],[1,1]];
+val Y = to_real [[1], [0], [0], [1]];
+val W1 = rand_Matrix [2,2];
+val W2 = rand_Matrix [2,1];
 
+fun mult_list (l1:real list) l2 = #2 (foldl (fn (x, ((y::yr), ot)) => (yr, ot@[x*y]) ) (l2, []) l1);
 
+fun mult X Y = #2 (foldl (fn (x, ((y::yr), ot)) => (yr, ot@[(mult_list x y)] )) (X, []) Y);
 
+fun outer (X:real list) Y = foldl (fn (x, s) => s@[(foldl (fn (y, a) => a@[y*x]) [] Y )] ) [] X;
 
-(* to be implemente : DIY EXP *)
-fun get_decimal x = if Real.compare((Real.fromInt(Real.floor(x))), x) = EQUAL then Real.floor(x) else get_decimal (x*10.0);
+fun sigm X = foldl (fn (x, ot) => ot@[foldl (fn (x, s) => s@[sigmoid x]) [] x]) [] X;
 
-fun n_digit z =
-  case Real.compare((Real.fromInt(Real.floor(z))), z) of
-    EQUAL => 0
-  | _ => 1 + n_digit (z*10.0);
+fun sigm_deriv X = foldl (fn (x, ot) => ot@[foldl (fn (x, s) => s@[sigmoid_deriv x]) [] x]) [] X;
 
-fun ggT(a, b) = if Real.compare(b, 0.0) = EQUAL then abs(a) else ggT(b, Real.fromInt((Real.floor(a)) mod (Real.floor(b))));
+fun div_array L n = foldl (fn (x, s) => s@[(x/n)]) [] L;
 
-fun frac x n =
+fun div_m X n =
   let
-    val b = (pow 10.0 (n))
-    val a = (b*x)
-    val gt = ggT(a,b)
+    val shape = shape X
   in
-    ((a/gt),(b/gt))
+     (foldl (fn (L, s) => s@[(div_array L n)]) [] X)
 end;
 
-(* to be implemente : DIY EXP *)
+fun predict X W1 W2 = foldl (fn (x, s) => s@[(map sigmoid x)]) [] (dot (foldl (fn (x, s) => s@[(map sigmoid x)]) [] (dot X W1)) W2);
+predict X W1 W2;
+
+fun back X Y W1_ W2_ =
+  let
+    val lr = 0.01
+    val model_output = predict [X] W1_ W2_
+    val output_deltas = const_Matrix [1,(#2 (shape W2_))] 0.0
+    (* Output_layer error *)
+    val output_error = sub model_output [Y]
+    val delta_out = mult (sigm_deriv model_output) output_error
+    val hidden_out = sigm (dot [X] W1_)
+    val delta_hidden = mult (sigm_deriv hidden_out) (transpose (dot W2_ (transpose delta_out)))
+    (* update *)
+    val update_output = mul (outer (hd hidden_out) (hd delta_out)) lr
+    val update_hidden = outer (X) (hd delta_hidden)
+  in
+   [((add W1_ update_hidden), (add W2_ update_output))]
+  end;
+
+fun newW Ws w1_ w2_ =
+  let
+    val l = List.length(Ws)
+    val fl = 1.0/Real.fromInt(l)
+  in
+    foldl (fn ((dw1,dw2), (nw1, nw2)) => ((add nw1 (mul dw1 fl)), (add nw2 (mul dw2 fl)))) (w1_, w2_) Ws
+  end;
+
+fun train_fit_backpropagate X Y W1 W2 =
+  newW (#1 (foldl (fn (x, (s, (y::yr))) => (s@back x y W1 W2, yr)) ([], Y) X)) W1 W2;

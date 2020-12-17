@@ -115,7 +115,7 @@ predict X W1 W2;
 
 fun back X Y W1_ W2_ =
   let
-    val lr = 0.01
+    val lr = 0.0001
     val model_output = predict [X] W1_ W2_
     val output_deltas = const_Matrix [1,(#2 (shape W2_))] 0.0
     (* Output_layer error *)

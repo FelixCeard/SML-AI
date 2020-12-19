@@ -76,20 +76,14 @@ fun transpose nil = nil
 fun sigmoid x = (1.0/(1.0 + Math.exp(~x)));
 fun sigmoid_deriv (x) = x * (1.0 - x);
 
-fun mul_array X (n:real) = foldl (fn (x, s) => (x*n)::s) [] X;
+fun mul_array X (n:real) = foldl (fn (x, s) => s@[x*n]) [] X;
 
 fun mul X n =
   let
     val shape = shape X
   in
-    rev (foldl (fn (L, s) => s@(mul_array L n)) [] X)
+    rev (foldl (fn (L, s) => s@[(mul_array L n)]) [] X)
 end;
-
-
-val X = to_real [[0,0],[0,1],[1,0],[1,1]];
-val Y = to_real [[1], [0], [0], [1]];
-val W1 = rand_Matrix [2,2];
-val W2 = rand_Matrix [2,1];
 
 fun mult_list (l1:real list) l2 = #2 (foldl (fn (x, ((y::yr), ot)) => (yr, ot@[x*y]) ) (l2, []) l1);
 
@@ -110,33 +104,40 @@ fun div_m X n =
      (foldl (fn (L, s) => s@[(div_array L n)]) [] X)
 end;
 
-fun predict X W1 W2 = foldl (fn (x, s) => s@[(map sigmoid x)]) [] (dot (foldl (fn (x, s) => s@[(map sigmoid x)]) [] (dot X W1)) W2);
-predict X W1 W2;
+fun predict X W1 W2 = sigm (dot (sigm (dot X W1)) W2);
 
-fun back X Y W1_ W2_ =
+fun errorMSE IN OUT W1 W2 = mean (foldl (fn (X, s) => s@[(foldl (fn (x, ss) => ss+x*x) 0.0 X )] ) [] (sub (predict IN W1 W2) OUT));
+
+fun backprop x y W1 W2 =
   let
-    val lr = 0.0001
-    val model_output = predict [X] W1_ W2_
-    val output_deltas = const_Matrix [1,(#2 (shape W2_))] 0.0
-    (* Output_layer error *)
-    val output_error = sub model_output [Y]
-    val delta_out = mult (sigm_deriv model_output) output_error
-    val hidden_out = sigm (dot [X] W1_)
-    val delta_hidden = mult (sigm_deriv hidden_out) (transpose (dot W2_ (transpose delta_out)))
-    (* update *)
-    val update_output = mul (outer (hd hidden_out) (hd delta_out)) lr
-    val update_hidden = outer (X) (hd delta_hidden)
+    val predicted = predict x W1 W2
+    val delta_error = hd (hd (sub predicted y))
+    val a_learning_rate = 0.001
+    (* update W2 *)
+    val nW2 = add W2 (mul (transpose (sigm(dot x W1))) (delta_error*a_learning_rate)) (* added the transpose for working purpose, might be an error*)
+    (* update W1 *)
+    val nW1 = add W1 (mul (dot (transpose x) (transpose W2)) (delta_error * a_learning_rate)) (* tranpose was added here too, might be also wrong *)
   in
-   [((add W1_ update_hidden), (add W2_ update_output))]
+    (nW1, nW2)
   end;
 
-fun newW Ws w1_ w2_ =
+fun merge_in_tuple X Y =
+  #3 (iter (List.length(X)) (X, Y, []) (fn ( (x::xr), (y::yr), s ) => (xr, yr, ([x],[y])::s )));
+
+fun backpropagation X Y W_hidden W_out =
   let
-    val l = List.length(Ws)
-    val fl = 1.0/Real.fromInt(l)
+    val merged = merge_in_tuple X Y
+    val interations = 3000
   in
-    foldl (fn ((dw1,dw2), (nw1, nw2)) => ((add nw1 (mul dw1 fl)), (add nw2 (mul dw2 fl)))) (w1_, w2_) Ws
+    iter interations (W_hidden, W_out) (fn (W1_, W2_) => (foldl (fn ((x,y), (wi, wo)) => backprop x y wi wo ) (W1_, W2_) merged))
   end;
 
-fun train_fit_backpropagate X Y W1 W2 =
-  newW (#1 (foldl (fn (x, (s, (y::yr))) => (s@back x y W1 W2, yr)) ([], Y) X)) W1 W2;
+(* examples *)
+val X = to_real [[0,0],[0,1],[1,0],[1,1]];
+val Y = to_real [[1], [0], [0], [1]];
+val W1 = rand_Matrix [2,2];
+val W2 = rand_Matrix [2,1];
+
+val (W1_, W2_) = backpropagation X Y W1 W2;
+errorMSE X Y W1 W2;
+errorMSE X Y W1_ W2_;

@@ -179,7 +179,7 @@ fun backpropagation_new X Y W1 W2 B1 B2=
       ((nw1, nw2), (nb1,nb2))
   end;
 
-fun backprop_new X Y W_hidden W_out B_hid B_out=
+fun backprop X Y W_hidden W_out B_hid B_out=
   let
     val merged = merge_in_tuple X Y
   in

@@ -18,7 +18,7 @@ val B1 = rand_Matrix [1,hidden_size];
 val B2 = rand_Matrix [1,1];
 
 (* train the model *)
-val ((nW1, nW2),(nb1, nb2)) = backprop_new train_set_input train_set_output W1 W2 B1 B2;
+val ((nW1, nW2),(nb1, nb2)) = backprop train_set_input train_set_output W1 W2 B1 B2;
 
 (* compute the initial error *)
 val error_epoch0 = errorMSE train_set_input train_set_output W1 W2 B1 B2;

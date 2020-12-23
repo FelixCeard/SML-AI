@@ -5,11 +5,11 @@
 *)
 
 (* Hyperparameter for the random generator *)
-val nachkommastellen = ref 4;
+val decimal_places = ref 4;
 val seed = ref 2534;
-val b = ref 424;
+val generator_b = ref 424;
 val Xval = ref 1;
-val interations = ref 1000;
+val interations = ref 10;
 val lr = ref 0.01;
 
 exception matrix_not_compatible;
@@ -18,6 +18,7 @@ exception row_and_col_missmatch;
 (* foldl and iter *)
 fun foldl f s nil = s
 | foldl f s (x::xr) = foldl f (f(x,s)) xr;
+
 fun 'a iter (n:int) (s:'a) (f:'a ->'a) : 'a = if n<1 then s else iter (n-1) (f s) (f);
 
 (* help functions *)
@@ -51,9 +52,9 @@ fun gen_random a X b m = Real.fromInt((a*X + b) mod m)/Real.fromInt(m);
 
 fun rand X =
   let
-    val m = Real.round(pow 10.0 (!nachkommastellen))
+    val m = Real.round(pow 10.0 (!decimal_places))
   in
-    gen_random (!seed) X (!b) m
+    gen_random (!seed) X (!generator_b) m
 end;
 
 fun update_X_for_rand _ =
@@ -156,7 +157,7 @@ fun div_list_n_list (l1:real list) l2 = #2 (foldl (fn (x, ((y::yr), ot)) => (yr,
 
 fun div_m_n_m X Y = #2 (foldl (fn (x, ((y::yr), ot)) => (yr, ot@[(div_list_n_list x y)] )) (Y, []) X);
 
-fun backpropagation_new X Y W1 W2 B1 B2=
+fun backpropagation X Y W1 W2 B1 B2=
   let
     val batch_size = #1 (shape Y)
     val pr = predict X W1 W2 B1 B2
@@ -179,9 +180,9 @@ fun backpropagation_new X Y W1 W2 B1 B2=
       ((nw1, nw2), (nb1,nb2))
   end;
 
-fun backprop X Y W_hidden W_out B_hid B_out=
+fun backprop X Y W_hidden W_out B_hid B_out =
   let
     val merged = merge_in_tuple X Y
   in
-    iter (!interations) ((W_hidden, W_out),(B_hid, B_out)) (fn ( ((wi, wo),(bi, bo)) ) => backpropagation_new X Y wi wo bi bo)
+    iter (!interations) ((W_hidden, W_out),(B_hid, B_out)) (fn ( ((wi, wo),(bi, bo)) ) => backpropagation X Y wi wo bi bo)
   end;

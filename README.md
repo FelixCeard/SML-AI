@@ -34,5 +34,8 @@ val ((new_hidden_weights, new_output_weights), (new_hidden_bias, new_output_bias
 val error = errorMSE X Y Weights_hidden Weights_out Bias_hidden
 ```
 ---
+# WIki
+You can find the wiki [here: https://github.com/FelixCeard/SML-AI/wiki](https://github.com/FelixCeard/SML-AI/wiki). Every function that is being used is explained there. 
+---
 # Contact
 To contact me, simply write me an emaill: felix@falkenbergs.de

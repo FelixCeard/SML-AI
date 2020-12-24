@@ -1,6 +1,9 @@
 # SML AI
+
 This is a package for creating AIs in SML.
-***
+
+#
+
 ## How to download it
 Clone this repository with ```git clone https://github.com/FelixCeard/SML-AI/``` or download [lib.sml](https://github.com/FelixCeard/SML-AI/blob/master/lib.sml).
 
@@ -33,9 +36,9 @@ val ((new_hidden_weights, new_output_weights), (new_hidden_bias, new_output_bias
 (* You can calculate the error with the function 'errorMSE' *)
 val error = errorMSE X Y Weights_hidden Weights_out Bias_hidden
 ```
----
+#
 # WIki
 You can find the wiki [here: https://github.com/FelixCeard/SML-AI/wiki](https://github.com/FelixCeard/SML-AI/wiki). Every function that is being used is explained there. 
----
+#
 # Contact
 To contact me, simply write me an emaill: felix@falkenbergs.de

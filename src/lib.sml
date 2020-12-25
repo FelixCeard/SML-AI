@@ -4,13 +4,14 @@
     - custom int and real type for more flexible inputs
 *)
 
-(* Hyperparameter for the random generator *)
+(* Hyperparameters *)
 val decimal_places = ref 4;
 val seed = ref 2534;
 val generator_b = ref 424;
 val Xval = ref 1;
 val interations = ref 10;
 val lr = ref 0.01;
+val error_history = ref [~1.0];
 
 exception matrix_not_compatible;
 exception row_and_col_missmatch;
@@ -140,49 +141,90 @@ end;
 
 fun create_batchlength X n = iter (n-1) X (fn (S) => (hd X)::S);
 
-fun predict X W1 W2 B1 B2 =
-  let
-    val s = #1 (shape X)
-  in
-    sigm (add (dot (sigm (add (dot X W1) (create_batchlength B1 s))) W2) (create_batchlength B2 s))
-  end;
-
-fun errorMSE IN OUT W1 W2 B1 B2 = mean (foldl (fn (X, s) => s@[(foldl (fn (x, ss) => ss+x*x) 0.0 X )] ) [] (sub (predict IN W1 W2 B1 B2) OUT));
-
 fun element X = hd (hd X);
 
-fun merge_in_tuple X Y = #3 (iter (List.length(X)) (X, Y, []) (fn ( (x::xr), (y::yr), s ) => (xr, yr, s@[([x],[y])] )));
+fun merge_in_tuple X Y = #3 (iter (List.length(X)) (X, Y, []) (fn ( (x::xr), (y::yr), s ) => (xr, yr, [([x],[y])]@s )));
 
 fun div_list_n_list (l1:real list) l2 = #2 (foldl (fn (x, ((y::yr), ot)) => (yr, ot@[x/y]) ) (l2, []) l1);
 
 fun div_m_n_m X Y = #2 (foldl (fn (x, ((y::yr), ot)) => (yr, ot@[(div_list_n_list x y)] )) (Y, []) X);
 
-fun backpropagation X Y W1 W2 B1 B2=
-  let
-    val batch_size = #1 (shape Y)
-    val pr = predict X W1 W2 B1 B2
-    val d = (sigm_deriv pr)
-    val delta_W2 = mul (sub Y pr) (element d)
-    val delta_W1 = mul (dot delta_W2 (transpose W2)) (element d)
-    val dw1 = div_m (dot (transpose X) delta_W1) (Real.fromInt(batch_size))
-    val a_sW1 = sigm (dot X W1)
-    val dw2 = div_m (dot (transpose a_sW1) delta_W2) (Real.fromInt(batch_size))
+(* AI lib *)
+fun create_layers weights biases =
+  #2 (foldl (fn ( x , ( (b::br), lrs ) ) => (br, lrs@[(x, b)])) (biases,[]) weights);
 
-    (* new weights *)
-    val nw1 = add W1 (mul dw1 (!lr))
-    val nw2 = add W2 (mul dw2 (!lr))
-    (* new biases *)
-    val nb1 = transpose (dot (transpose delta_W1) (const_Matrix [batch_size, 1] 1.0))
-    val nb2 = transpose (dot (transpose delta_W2) (const_Matrix [batch_size, 1] 1.0))
-    val nb1 = add B1 (mul nb1 (!lr))
-    val nb2 = add B2 (mul nb2 (!lr))
+fun predict X {weights, biases} =
+  let
+    val layers = create_layers weights biases
+    val s = #1 (shape X)
   in
-      ((nw1, nw2), (nb1,nb2))
+    (foldl (fn ((w, b) , out) => (sigm (add (dot out w) (create_batchlength b s)  ))) X layers)
   end;
 
-fun backprop X Y W_hidden W_out B_hid B_out =
+fun create_model shapes =
+  let
+  val (ww, bb) = #2 (foldl (fn (current, (old, (w, b))) => (current,( w@[(rand_Matrix [old, current])], b@[(rand_Matrix [1, current])]))) ((hd shapes),([],[])) (tl shapes))
+in
+  {weights=ww, biases=bb}
+end;
+
+fun remove _ [] = []
+  | remove n LIST = if n = 0 then LIST else remove (n-1) (tl LIST);
+
+fun predict_nth_layer X n weights biases =
+let
+    val layers = create_layers weights biases
+    val layers = rev (remove (List.length(weights) - n) (rev layers))
+    val s = #1 (shape X)
+  in
+    (foldl (fn ((w, b) , out) => (sigm (add (dot out w) (create_batchlength b s)  ))) X layers)
+  end;
+
+fun backpropagation X Y {weights, biases}=
+  let
+    val batch_size = #1 (shape Y)
+    val merged = merge_in_tuple weights biases
+    (* last layer *)
+    val pr = predict X {weights=weights, biases=biases}
+    val d = (sigm_deriv pr)
+    val delta_W2 = mul (sub Y pr) (element d)
+    (* for all layers *)
+    val deltas = #2 (foldl (fn (w,(ld, ds)) => ((mul (dot ld (transpose w)) (element d)), (((mul (dot ld (transpose w)) (element d))))::ds)) (delta_W2,[(delta_W2)]) ( (rev weights))) (* works *)
+    val new_dw1 = div_m (dot (transpose X) (hd (tl deltas))) (Real.fromInt(batch_size)) (* works *)
+    val dws = #3 (foldl (fn (dlt,(lst_dw, i, rst)) => (( div_m (dot (transpose (predict_nth_layer X i weights biases)) dlt) (Real.fromInt(batch_size)) ), i+1, rst@[( (* shape *) (( div_m (dot (transpose (predict_nth_layer X i weights biases)) dlt) (Real.fromInt(batch_size)) )))])) (new_dw1, 0, []) (tl deltas)) (* seems to work *)
+
+    (* new weights *)
+    val new_weights = #2 (foldl (fn (w, (dop::ds, s)) => (ds, s@[((*shape*) (add w (mul dop (!lr))))])) (dws, []) weights) (* seems to work *)
+    (* new biases *)
+    val nbs = foldl (fn (dlt,s) => s@[shape (transpose (dot (transpose dlt) (const_Matrix [batch_size, 1] 1.0)))]) [] (rev (tl (rev deltas))) (* weird that you remove sth. *)
+    val new_biases = #2 (foldl (fn (bs, ((bias::bias_rest), rst)) => (bias_rest, rst@[(bias)])) (biases, []) nbs)
+  in
+      {weights = new_weights, biases = new_biases}
+  end;
+
+fun MSE X Y {weights, biases} =
+  let
+    val batch_size = Real.fromInt(#1 (shape X))
+  in
+    (foldl (fn (df, e) => (pow (foldl (fn (d,eo) => eo+(d*d)) 0.0 df) 2)+e ) 0.0 (sub (predict X {weights=weights, biases=biases}) Y)) / batch_size
+  end;
+
+fun make_history X Y {weights, biases} =
+  let
+    val error = MSE X Y {weights=weights, biases=biases}
+    val history = (!error_history)
+  in
+    error_history := history@[error]
+  end;
+
+fun backprop X Y {weights, biases} =
   let
     val merged = merge_in_tuple X Y
   in
-    iter (!interations) ((W_hidden, W_out),(B_hid, B_out)) (fn ( ((wi, wo),(bi, bo)) ) => backpropagation X Y wi wo bi bo)
+    iter (!interations) {weights=weights, biases=biases} (fn m =>
+        let
+          val added_error_to_history = make_history X Y m
+        in
+          backpropagation X Y m
+        end)
   end;

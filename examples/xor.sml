@@ -1,16 +1,18 @@
 use "../src/lib.sml";
 
-interations := 2000;
-lr := 0.000021;
+interations := 1000;
+lr := 0.003;
 
-(* create the data sets *)
+(* create the train data set *)
 val train_set_input = to_real [[0,0,1],[0,1,0],[0,0,0],[1,1,0]];
 val train_set_output = to_real [[1],[1],[0],[1]];
 
+(* create the test data set *)
 val test_set_input = to_real [[1,0,1],[1,0,0],[0,1,1],[1,1,1]];
 val test_set_output = to_real [[1],[1],[1],[0]];
 
-val model = create_model [3,4,4,1]
+(* create the model *)
+val model = create_model [3,1]
 
 (* train the model *)
 val trained_model = backprop train_set_input train_set_output model;

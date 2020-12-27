@@ -2,10 +2,6 @@
 
 This is a package for creating AIs in SML.
 #
-
-## How to download it
-Clone this repository with ```git clone https://github.com/FelixCeard/SML-AI/``` or download [lib.sml](https://github.com/FelixCeard/SML-AI/blob/master/src/lib.sml).
-
 ## How to use it
 Reference the [lib.sml](https://github.com/FelixCeard/SML-AI/blob/master/src/lib.sml) file in your SML script with
 ``` SML
@@ -35,6 +31,10 @@ val error = MSE X Y model
 #
 # WIki
 You can find the wiki [here: https://github.com/FelixCeard/SML-AI/wiki](https://github.com/FelixCeard/SML-AI/wiki). Every function that is being used is explained there.
+
+## How to download it
+Clone this repository with ```git clone https://github.com/FelixCeard/SML-AI/``` or download [lib.sml](https://github.com/FelixCeard/SML-AI/blob/master/src/lib.sml).
+
 #
 # Contact
 To contact me, simply write me an emaill: felix.ceard@gmail.com

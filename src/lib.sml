@@ -184,10 +184,12 @@ fun backpropagation X Y {weights, biases}=
   let
     val batch_size = #1 (shape Y)
     val merged = merge_in_tuple weights biases
+
     (* last layer *)
     val pr = predict X {weights=weights, biases=biases}
     val d = (sigm_deriv pr)
     val delta_W2 = mul (sub Y pr) (element d)
+
     (* for all layers *)
     val deltas = #2 (foldl (fn (w,(ld, ds)) => ((mul (dot ld (transpose w)) (element d)), (((mul (dot ld (transpose w)) (element d))))::ds)) (delta_W2,[(delta_W2)]) ( (rev weights))) (* works *)
     val new_dw1 = div_m (dot (transpose X) (hd (tl deltas))) (Real.fromInt(batch_size)) (* works *)
@@ -195,6 +197,7 @@ fun backpropagation X Y {weights, biases}=
 
     (* new weights *)
     val new_weights = #2 (foldl (fn (w, (dop::ds, s)) => (ds, s@[((*shape*) (add w (mul dop (!lr))))])) (dws, []) weights) (* seems to work *)
+
     (* new biases *)
     val nbs = foldl (fn (dlt,s) => s@[shape (transpose (dot (transpose dlt) (const_Matrix [batch_size, 1] 1.0)))]) [] (rev (tl (rev deltas))) (* weird that you remove sth. *)
     val new_biases = #2 (foldl (fn (bs, ((bias::bias_rest), rst)) => (bias_rest, rst@[(bias)])) (biases, []) nbs)

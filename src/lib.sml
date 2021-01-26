@@ -23,7 +23,7 @@ fun foldl f s nil = s
 fun 'a iter (n:int) (s:'a) (f:'a ->'a) : 'a = if n<1 then s else iter (n-1) (f s) (f);
 
 (* help functions *)
-fun pow (x:real) y = if y = 0 then 1.0 else x * pow x (y-1);
+fun pow (x:real) y = if y = 0 then 1.0 else x*pow x (y-1);
 
 fun add_list (l1:real list) l2 = #2 (foldl (fn (x, ((y::yr), ot)) => (yr, ot@[x+y]) ) (l2, []) l1);
 
